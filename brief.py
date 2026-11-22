@@ -36,14 +36,15 @@ def parse_date(text):
     return datetime.strptime(text.strip().replace("-", "."), "%Y.%m.%d").date()
 
 
-def full_title(row, link):
-    """목록에서 잘린 제목은 첨부파일 아이콘의 alt에서 전체 제목을 가져옴."""
+def full_title(link, href):
+    """목록에서 잘린 제목은 글 페이지에서 전체 제목을 가져옴."""
     title = re.sub(r"\s*새글$", "", link.get_text(" ", strip=True))
-    img = row.select_one("img[alt$='의 첨부파일']")
-    if title.endswith("...") and img:
-        m = re.match(r"'(.*)'의 첨부파일$", img["alt"])
-        if m:
-            return m.group(1)
+    if title.endswith("..."):
+        res = requests.get(href, headers=UA, timeout=20)
+        res.raise_for_status()
+        h = BeautifulSoup(res.text, "html.parser").select_one("h4.vtitle")
+        if h:
+            return h.get_text(" ", strip=True)
     return title
 
 
@@ -63,7 +64,8 @@ def collect(board, day):
             pinned = bool(set(row.get("class") or []) & {"notice", "isnotice"})
             if posted == day:
                 href = urljoin(url, link.get("href", ""))
-                posts[href] = full_title(row, link)
+                if href not in posts:
+                    posts[href] = full_title(link, href)
             elif posted < day and not pinned:
                 older_found = True
         if older_found:
@@ -72,15 +74,13 @@ def collect(board, day):
 
 
 def format_line(title, href):
-    # 맨 앞 [부서명]은 라벨로 분리
-    label = ""
-    m = re.match(r"\s*\[([^\]]+)\]\s*(.*)", title)
+    # 맨 앞 [부서명]은 링크 밖에 두고, 링크 텍스트 안의 대괄호는 전각으로 (디스코드는 이스케이프를 그대로 보여줌)
+    prefix = ""
+    m = re.match(r"\s*(\[[^\]]+\])\s*(.*)", title)
     if m:
-        label, title = m.group(1), m.group(2)
-    # 링크 텍스트 안의 대괄호는 마크다운을 깨뜨림
-    title = title.replace("[", "(").replace("]", ")")
-    line = f"[{title}]({href})"
-    return f"`{label}` {line}" if label else line
+        prefix, title = m.group(1) + " ", m.group(2)
+    title = title.replace("[", "［").replace("]", "］")
+    return f"- {prefix}[{title}]({href})"
 
 
 def build_embeds(name, day, posts):
@@ -90,10 +90,10 @@ def build_embeds(name, day, posts):
     # embed 설명 한도 4096자
     chunks, cur = [], ""
     for line in lines:
-        if len(cur) + len(line) + 2 > 4000:
+        if len(cur) + len(line) + 1 > 4000:
             chunks.append(cur)
             cur = ""
-        cur += line + "\n\n"
+        cur += line + "\n"
     chunks.append(cur)
 
     embeds = [{"description": c.strip()} for c in chunks]

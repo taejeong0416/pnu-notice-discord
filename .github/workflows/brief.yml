@@ -2,8 +2,8 @@ name: PNU Notice Brief
 
 on:
   schedule:
-    # 23:00 UTC = 08:00 KST (매일)
-    - cron: "0 23 * * *"
+    # 08:00 UTC = 17:00 KST (매일)
+    - cron: "0 8 * * *"
   workflow_dispatch: # 수동 실행 버튼
     inputs:
       dry_run:
