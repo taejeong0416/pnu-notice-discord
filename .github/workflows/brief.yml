@@ -10,6 +10,10 @@ on:
         description: "디스코드에 보내지 않고 로그로만 확인"
         type: boolean
         default: false
+      date:
+        description: "이 날짜 게시분을 보내기 (YYYY-MM-DD, 비우면 어제)"
+        type: string
+        default: ""
 
 jobs:
   brief:
@@ -20,6 +24,6 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install requests beautifulsoup4
-      - run: python brief.py ${{ inputs.dry_run && '--dry-run' || '' }}
+      - run: python brief.py ${{ inputs.dry_run && '--dry-run' || '' }} ${{ inputs.date && format('--date {0}', inputs.date) || '' }}
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}

@@ -116,6 +116,9 @@ def send(channel_id, embeds):
 def main():
     dry_run = "--dry-run" in sys.argv
     day = datetime.now(KST).date() - timedelta(days=1)
+    # --date YYYY-MM-DD: 지난 날짜 다시 보내기
+    if "--date" in sys.argv:
+        day = datetime.strptime(sys.argv[sys.argv.index("--date") + 1], "%Y-%m-%d").date()
 
     for board in BOARDS:
         name, channel_id = board[0], board[5]
